@@ -5,7 +5,7 @@ GET  /search?q= → chat search for compose
 GET  /intel    → copy intelligence prompt + open Claude
 POST /send     → send via wacli (pauses sync daemon, restarts it)
 POST /mute     → snooze a thread until new messages arrive; logs feedback
-Background refresh every 15 min. Runs under launchd sh.echo.dashboard."""
+Background refresh every 15 min. Runs under launchd sh.wacli.dashboard."""
 import http.server, socketserver, subprocess, threading, time, os, sys, json, sqlite3
 from urllib.parse import urlparse, parse_qs
 
@@ -17,8 +17,14 @@ PORT = 8787
 UID = os.getuid()
 send_lock = threading.Lock()
 
-INTEL_PROMPT = ("Echo intelligence run — follow ~/.echo/skills/echo-intelligence/SKILL.md "
-                "(RECURRING RUN section) end to end, then report the delta.")
+INTEL_PROMPT = ("WhatsApp intelligence run. FIRST: if file tools cannot see a path below, read it "
+                "via osascript (do shell script cat …) — never conclude a file is missing. "
+                "Follow /Users/shubham/Documents/Claude/Projects/Master Project/skills/whatsapp-intelligence/"
+                "SKILL.md end to end: re-verdict both queues (window context, calendar cross-ref "
+                "on meeting-flagged threads), triage the dropped-balls queue, respect user-mute "
+                "feedback in feedback_log.csv, update thread_state.json + claude_data.js + "
+                "heuristics_config.json lexicons, backfill conclusions into ACTIVE_THREADS, "
+                "advance STATE.json last_processed, then report the delta.")
 
 def run_refresh():
     try:
@@ -31,7 +37,7 @@ def do_send(to, message):
     env = dict(os.environ, WACLI_STORE_DIR=os.path.join(BASE, "store"),
                PATH="/opt/homebrew/bin:" + os.environ.get("PATH", ""))
     with send_lock:
-        subprocess.run(["launchctl", "bootout", "gui/%d/sh.echo.sync" % UID], capture_output=True)
+        subprocess.run(["launchctl", "bootout", "gui/%d/sh.wacli.sync" % UID], capture_output=True)
         time.sleep(1.5)
         try:
             r = subprocess.run([WACLI, "send", "text", "--to", to, "--message", message,
@@ -42,7 +48,7 @@ def do_send(to, message):
             ok, out = False, str(e)
         finally:
             subprocess.run(["launchctl", "bootstrap", "gui/%d" % UID,
-                            os.path.expanduser("~/Library/LaunchAgents/sh.echo.sync.plist")],
+                            os.path.expanduser("~/Library/LaunchAgents/sh.wacli.sync.plist")],
                            capture_output=True)
     return ok, out
 
@@ -119,10 +125,23 @@ class H(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
     def log_message(self, *a): pass
 
+def _max_ts():
+    try:
+        con = sqlite3.connect("file:%s?mode=ro" % DB, uri=True)
+        v = con.execute("SELECT MAX(ts) FROM messages").fetchone()[0] or 0
+        con.close(); return v
+    except Exception: return 0
+
 def loop():
+    # Refresh on new activity (incl. messages you send from your phone) within ~60s,
+    # and a hard refresh at least every 15 min as a floor.
+    run_refresh()
+    last_seen = _max_ts(); last_full = time.time()
     while True:
-        run_refresh()
-        time.sleep(900)
+        time.sleep(60)
+        cur = _max_ts()
+        if cur > last_seen or (time.time() - last_full) >= 900:
+            run_refresh(); last_seen = cur; last_full = time.time()
 
 threading.Thread(target=loop, daemon=True).start()
 socketserver.ThreadingTCPServer.allow_reuse_address = True

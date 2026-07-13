@@ -48,12 +48,14 @@ chats = {}
 for r in con.execute("""SELECT c.jid, c.kind, COALESCE(NULLIF(c.name,''),c.jid) name,
     (SELECT COUNT(*) FROM group_participants gp WHERE gp.group_jid=c.jid) members,
     (SELECT COUNT(DISTINCT sender_jid||date(ts,'unixepoch')) FROM messages
-      WHERE chat_jid=c.jid AND ts >= :w)/7.0 spd
-    FROM chats c WHERE c.kind IN ('dm','group')""", {"w": now-7*86400}):
+      WHERE chat_jid=c.jid AND ts >= :w)/7.0 spd,
+    (SELECT COUNT(*) FROM messages WHERE chat_jid=c.jid AND from_me=1 AND ts >= :t) my10d
+    FROM chats c WHERE c.kind IN ('dm','group')""", {"w": now-7*86400, "t": now-10*86400}):
     jid = r["jid"]
     if jid in overrides: label = overrides[jid]
     elif r["kind"] == "dm": label = "dm"
     elif r["members"] <= 15: label = "working-group"
+    elif r["my10d"] > 0: label = "working-group"   # I spoke here in last 10d = it matters
     elif r["members"] <= 100 and r["spd"] < 5: label = "signal-group"
     else: label = "clutter"
     chats[jid] = dict(name=r["name"], label=label)
@@ -146,17 +148,21 @@ rank = lambda x: (x.get("priority", 2), 0 if x["src"] == "claude" else 1, -x["ag
 close_loop.sort(key=rank); chase.sort(key=rank)
 personal.sort(key=rank)
 
-since_last = []  # raw last-30-min peek: everything except ignore/clutter (FOMO killer)
-for r in con.execute("""SELECT chat_jid, COUNT(*) n FROM messages
-    WHERE ts > ? AND reaction_to_id IS NULL GROUP BY chat_jid ORDER BY MAX(ts) DESC""",
-    (now - 1800,)):
+since_last = []  # raw last-90-min peek: everything except ignore/clutter (FOMO killer)
+for r in con.execute("""SELECT m.chat_jid, COUNT(*) n,
+    (SELECT from_me FROM messages WHERE chat_jid=m.chat_jid AND reaction_to_id IS NULL
+       AND revoked=0 ORDER BY ts DESC LIMIT 1) last_from_me
+    FROM messages m WHERE m.ts > ? AND m.reaction_to_id IS NULL
+    GROUP BY m.chat_jid ORDER BY MAX(m.ts) DESC""",
+    (now - 5400,)):
     ch = chats.get(r["chat_jid"])
     if not ch or ch["label"] in ("ignore", "clutter"): continue
     nm = ch["name"]
     if nm.endswith("@s.whatsapp.net") or nm.endswith("@g.us"): continue
     since_last.append(dict(jid=r["chat_jid"], name=nm, label=ch["label"],
-                           count=r["n"], recent=recent_msgs(r["chat_jid"], 3)))
-    if len(since_last) >= 25: break
+                           count=r["n"], unreplied=(r["last_from_me"]==0),
+                           recent=recent_msgs(r["chat_jid"], 3)))
+    if len(since_last) >= 40: break
 
 # Dropped balls: tracked chats silent 7-45d whose last exchange ended unresolved
 dropped = []

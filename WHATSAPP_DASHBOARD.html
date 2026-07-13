@@ -9,26 +9,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0b141a;            /* WA dark */
-    --panel:#111b21;
-    --bubble:#202c33;        /* WA incoming bubble */
-    --mine:#005c4b;          /* WA outgoing bubble */
-    --border:#233138;
-    --text:#e9edef;
-    --dim:#8696a0;
-    --wa:#25D366;
-    --teal:#00a884;
-    --red:#ff5e57;
-    --amber:#ffb02e;
-    --blue:#53bdeb;
-    --pink:#ff7ab6;
-  }
+  :root{--bg:#0b141a;--panel:#111b21;--bubble:#202c33;--mine:#005c4b;--border:#233138;
+    --text:#e9edef;--dim:#8696a0;--wa:#25D366;--teal:#00a884;--red:#ff5e57;--amber:#ffb02e;--blue:#53bdeb;--pink:#ff7ab6;}
   *{box-sizing:border-box;margin:0;padding:0;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',-apple-system,sans-serif;
        max-width:900px;margin:0 auto;padding:0 18px 70px;position:relative;}
-  /* grain */
   body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;z-index:1;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");}
   header{padding:26px 0 6px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;}
@@ -45,19 +31,16 @@
   .sub{color:var(--dim);font-size:11px;margin:2px 0 14px;}
   .sub .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--wa);margin-right:6px;}
   .sub .dot.stale{background:var(--red);}
-  /* menu */
   #menu{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 85%,transparent);
         padding:10px 0 12px;display:flex;gap:8px;flex-wrap:wrap;}
   #menu button{font-family:inherit;background:var(--panel);border:1.5px solid var(--border);color:var(--dim);
-        border-radius:999px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;
-        transition:all .15s;white-space:nowrap;}
+        border-radius:999px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
   #menu button b{font-weight:700;color:var(--text);margin-left:4px;}
   #menu button:hover{border-color:var(--wa);color:var(--text);transform:translateY(-1px);}
   #menu button.on{background:var(--wa);border-color:var(--wa);color:#06110d;}
   #menu button.on b{color:#06110d;}
   #menu button.hot:not(.on){border-color:#ff5e5766;}
   #menu button.hot:not(.on) b{color:var(--red);}
-  /* views */
   .view{display:none;animation:pop .18s ease;}
   .view.on{display:block;}
   @keyframes pop{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
@@ -67,7 +50,10 @@
   .viewhead h2 .scribble::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:6px;
     background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='8'%3E%3Cpath d='M2 5 Q 20 1 40 5 T 80 5 T 118 4' stroke='%2325D366' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x;background-size:120px 8px;}
   .viewhead p{font-family:'Caveat',cursive;font-size:19px;color:var(--dim);margin-top:6px;transform:rotate(-.5deg);}
-  /* cards as WA-ish bubbles */
+  .filterbar{display:flex;gap:8px;margin-bottom:12px;}
+  .filterbar button{font-family:inherit;background:var(--panel);border:1.5px solid var(--border);color:var(--dim);
+     border-radius:999px;padding:5px 13px;font-size:12px;cursor:pointer;}
+  .filterbar button.on{background:var(--bubble);border-color:var(--wa);color:var(--wa);}
   .card{background:var(--bubble);border-radius:14px 14px 14px 4px;padding:12px 16px;margin-bottom:10px;
         position:relative;border:1px solid transparent;transition:transform .12s,border-color .12s;}
   .card:hover{transform:translateX(3px);border-color:var(--border);}
@@ -75,12 +61,12 @@
   .card.claude{box-shadow:-3px 0 0 var(--blue);}
   .card .who{font-weight:700;font-size:14.5px;color:var(--wa);}
   .card.p1 .who{color:var(--red);}
-  .card .tag{font-size:10px;padding:2px 9px;border-radius:999px;margin-left:7px;vertical-align:1px;
-        background:#8696a022;color:var(--dim);font-weight:500;}
+  .card .tag{font-size:10px;padding:2px 9px;border-radius:999px;margin-left:7px;vertical-align:1px;background:#8696a022;color:var(--dim);font-weight:500;}
   .card .tag.p1{background:#ff5e5722;color:var(--red);font-weight:700;}
   .card .tag.wg{background:#53bdeb22;color:var(--blue);}
   .card .tag.meet{background:#ffb02e22;color:var(--amber);}
   .card .tag.stale{background:#ff5e5722;color:var(--red);}
+  .card .tag.unrep{background:#25D36622;color:var(--wa);font-weight:700;}
   .card .what{font-size:13.5px;color:var(--dim);margin-top:5px;line-height:1.55;}
   .card .next{font-size:13.5px;color:var(--text);margin-top:6px;line-height:1.5;}
   .card .next::before{content:"→ ";color:var(--wa);font-weight:700;}
@@ -92,30 +78,38 @@
   .abtn.mute:hover{color:var(--amber);border-color:var(--amber);}
   .ctx{margin-top:8px;border-top:1px dashed var(--border);padding-top:7px;font-size:12.5px;line-height:1.6;color:var(--dim);}
   .ctx .m b{color:var(--text);font-weight:600;}
-  /* drafts = outgoing WA bubbles */
   .draft{background:var(--mine);border-radius:14px 14px 4px 14px;padding:12px 15px;margin-bottom:10px;
         font-size:13.5px;line-height:1.55;max-width:92%;margin-left:auto;position:relative;color:#e7fce3;}
   .draft .to{font-size:11px;color:#8fe3c0;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
-  .draft .use{float:right;background:#0b141a44;border:none;color:#c3f5d9;border-radius:999px;
-        padding:3px 11px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;}
-  .draft .use:hover{background:#0b141a88;}
-  .quiet{color:var(--dim);font-size:15px;padding:26px 4px;font-family:'Caveat',cursive;font-size:21px;transform:rotate(-1deg);}
+  .draft .acts{position:absolute;top:10px;right:12px;display:flex;gap:6px;}
+  .draft .acts button{background:#0b141a44;border:none;color:#c3f5d9;border-radius:999px;
+        padding:3px 10px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;}
+  .draft .acts button:hover{background:#0b141a99;}
+  .quiet{color:var(--dim);padding:26px 4px;font-family:'Caveat',cursive;font-size:21px;transform:rotate(-1deg);}
   .personal-s .card{opacity:.85;}
-  /* compose */
   #compose{background:var(--panel);border:1.5px solid var(--border);border-radius:18px;padding:18px;}
   #compose .row{display:flex;gap:8px;margin-bottom:10px;position:relative;}
   #compose input,#compose textarea{background:var(--bubble);border:1.5px solid transparent;border-radius:12px;
       color:var(--text);padding:11px 14px;font-size:14px;font-family:inherit;width:100%;transition:border-color .15s;}
   #compose input:focus,#compose textarea:focus{outline:none;border-color:var(--teal);}
   #compose textarea{min-height:80px;resize:vertical;}
+  #c-chip{display:none;align-items:center;gap:8px;background:var(--mine);color:#e7fce3;border-radius:12px;
+     padding:9px 14px;font-size:13.5px;font-weight:600;margin-bottom:10px;}
+  #c-chip.on{display:flex;}
+  #c-chip button{margin-left:auto;background:none;border:none;color:#c3f5d9;cursor:pointer;font-size:16px;}
   #sugg{position:absolute;top:100%;left:0;right:0;background:var(--bubble);border:1.5px solid var(--border);
-        border-radius:12px;z-index:30;max-height:230px;overflow:auto;display:none;margin-top:4px;}
-  #sugg div{padding:10px 14px;font-size:13.5px;cursor:pointer;}
-  #sugg div:hover{background:var(--panel);color:var(--wa);}
-  #send-status{font-size:12.5px;margin-left:10px;color:var(--dim);font-family:'Caveat',cursive;font-size:17px;}
-  .foot{margin-top:36px;padding-top:14px;border-top:1px dashed var(--border);color:var(--dim);
-        font-size:11px;line-height:1.8;}
+        border-radius:12px;z-index:30;max-height:240px;overflow:auto;display:none;margin-top:4px;}
+  #sugg div{padding:11px 14px;font-size:13.5px;cursor:pointer;}
+  #sugg div:hover,#sugg div.hl{background:var(--panel);color:var(--wa);}
+  .foot{margin-top:36px;padding-top:14px;border-top:1px dashed var(--border);color:var(--dim);font-size:11px;line-height:1.8;}
   code{background:var(--bubble);padding:1px 6px;border-radius:6px;font-size:11px;}
+  #toasts{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center;}
+  .toast{background:var(--panel);border:1.5px solid var(--border);border-radius:12px;padding:11px 18px;
+     font-size:13.5px;font-weight:600;box-shadow:0 8px 30px #000a;animation:tin .2s ease;max-width:360px;text-align:center;}
+  .toast.ok{border-color:var(--wa);color:var(--wa);}
+  .toast.err{border-color:var(--red);color:var(--red);}
+  .toast.info{border-color:var(--blue);color:var(--blue);}
+  @keyframes tin{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 </style>
 </head>
 <body>
@@ -136,7 +130,7 @@
   <button data-view="v-chase">🟠 they owe<b id="n-chase">–</b></button>
   <button data-view="v-drafts">📝 ready to fire<b id="n-drafts">–</b></button>
   <button data-view="v-dropped">🕳 graveyard<b id="n-dropped">–</b></button>
-  <button data-view="v-since">🆕 last 30<b id="n-since">–</b></button>
+  <button data-view="v-since">🆕 last 90<b id="n-since">–</b></button>
   <button data-view="v-personal">💛 your people<b id="n-personal">–</b></button>
   <button data-view="v-compose">✍️ compose</button>
   <button data-view="v-groups">👥 the herd</button>
@@ -151,7 +145,7 @@
 </div><div id="l-chase"></div></div>
 
 <div class="view" id="v-drafts"><div class="viewhead">
-  <h2><span class="scribble">Ready to fire</span> 📝</h2><p>pre-written. load into compose, or copy → send from phone.</p>
+  <h2><span class="scribble">Ready to fire</span> 📝</h2><p>pre-written. compose, copy, or send straight from here.</p>
 </div><div id="drafts"></div></div>
 
 <div class="view" id="v-dropped"><div class="viewhead">
@@ -159,8 +153,14 @@
 </div><div id="l-dropped"></div></div>
 
 <div class="view" id="v-since"><div class="viewhead">
-  <h2><span class="scribble">The last 30</span> 🆕</h2><p>raw peek at everything non-clutter. fomo, handled.</p>
-</div><div id="l-since"></div></div>
+  <h2><span class="scribble">The last 90</span> 🆕</h2><p>raw peek at everything non-clutter. fomo, handled.</p>
+</div>
+  <div class="filterbar">
+    <button data-filt="unrep" class="on">🟢 waiting on me</button>
+    <button data-filt="all">everything</button>
+  </div>
+  <div id="l-since"></div>
+</div>
 
 <div class="view" id="v-personal"><div class="viewhead">
   <h2><span class="scribble">Your people</span> 💛</h2><p>friends & family. hustle is temporary, log kaam aate hai.</p>
@@ -170,9 +170,10 @@
   <h2><span class="scribble">Say the thing</span> ✍️</h2><p>sends via your linked device. use like hot sauce — sparingly.</p>
 </div>
   <div id="compose">
-    <div class="row"><input id="c-to" placeholder="search a chat… (or hit ✍️ on any card)" autocomplete="off"><div id="sugg"></div></div>
+    <div id="c-chip"><span>to: <span id="c-chip-name"></span></span><button onclick="clearChip()" title="clear">✕</button></div>
+    <div class="row"><input id="c-to" placeholder="search a chat by name…" autocomplete="off"><div id="sugg"></div></div>
     <div class="row"><textarea id="c-msg" placeholder="type it like you mean it…"></textarea></div>
-    <button class="btn" onclick="doSend(this)">send it</button><span id="send-status"></span>
+    <button class="btn" id="send-btn" onclick="doSend()">send it</button>
     <input type="hidden" id="c-jid">
   </div>
 </div>
@@ -182,17 +183,20 @@
 </div><div id="groups"></div></div>
 
 <div class="foot">
-  🔕 mute = gone until something NEW happens there (logged — echo learns your taste) ·
+  🔕 mute = snooze a thread till something NEW lands there (logged — echo learns your taste) ·
   <span style="color:var(--blue)">blue</span> = claude verdict · <span style="color:var(--red)">red</span> = P1 money-critical<br>
-  🧠 copies the run-prompt + opens Claude (⌘V, send) · ↻ mechanical engine, auto every 15 min · local only, zero cloud<br>
+  🧠 copies the run-prompt + opens Claude · ↻ mechanical engine, auto every 15 min · sync keeps running even when you send from your phone<br>
   kill switch: <code>launchctl bootout gui/$(id -u)/sh.echo.sync sh.echo.dashboard; rm -rf ~/.echo</code>
 </div>
+
+<div id="toasts"></div>
 
 <script src="dashboard_data.js"></script>
 <script src="claude_data.js"></script>
 <script>
 var A = window.WA_AUTO || {}, C = window.WA_CLAUDE || {};
 var LISTS = {close_loop:A.close_loop||[], chase:A.chase||[], dropped:A.dropped||[], personal:A.personal||[], since:A.since_last||[]};
+var sinceFilter = 'unrep';
 function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 function ago(h){ if(h<1) return Math.round(h*60)+'m'; if(h<48) return Math.round(h)+'h'; return Math.round(h/24)+'d'; }
 function ctx(recent){
@@ -202,6 +206,11 @@ function ctx(recent){
     return '<div class="m"><b>'+esc(m.slice(0,i))+':</b> '+esc(m.slice(i+2))+'</div>';
   }).join('')+'</div>';
 }
+function toast(msg,kind,ms){
+  var t=document.createElement('div'); t.className='toast '+(kind||'info'); t.textContent=msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(function(){t.remove();},300); }, ms||3200);
+}
 function showView(id){
   document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('on',v.id===id);});
   document.querySelectorAll('#menu button').forEach(function(b){b.classList.toggle('on',b.dataset.view===id);});
@@ -209,57 +218,93 @@ function showView(id){
 }
 function doRefresh(){
   var b=document.getElementById('refresh-btn'); b.disabled=true; b.textContent='refreshing…';
-  fetch('/refresh').then(function(r){return r.json();}).finally(function(){location.reload();});
+  toast('pulling fresh loops…','info',2000);
+  fetch('/refresh').then(function(r){return r.json();}).then(function(){location.reload();})
+    .catch(function(e){ b.disabled=false; b.textContent='↻ refresh'; toast('refresh failed: '+e,'err'); });
 }
 function doIntel(b){
   b.disabled=true;
   fetch('/intel').then(function(r){return r.json();}).then(function(){
+    toast('prompt copied → paste (Cmd+V) into Claude','ok',5000);
     b.textContent='🧠 copied — paste in Claude'; setTimeout(function(){b.disabled=false;b.textContent='🧠 intelligence';},4000);
-  });
+  }).catch(function(e){ b.disabled=false; toast('could not reach Claude: '+e,'err'); });
 }
-function loadCompose(jid,name,text){
+function setChip(jid,name){
   document.getElementById('c-jid').value=jid||'';
-  document.getElementById('c-to').value=name||'';
-  if(text) document.getElementById('c-msg').value=text;
+  var chip=document.getElementById('c-chip');
+  if(jid){ document.getElementById('c-chip-name').textContent=name; chip.classList.add('on');
+           document.getElementById('c-to').value=''; document.getElementById('c-to').placeholder='chat locked — clear (x) to change'; }
+  else { chip.classList.remove('on'); document.getElementById('c-to').placeholder='search a chat by name…'; }
+}
+function clearChip(){ setChip('',''); document.getElementById('c-to').focus(); }
+function loadCompose(jid,name,text){
+  setChip(jid,name);
+  if(text!=null) document.getElementById('c-msg').value=text;
   showView('v-compose');
   document.getElementById('c-msg').focus();
 }
-function doSend(b){
-  var jid=document.getElementById('c-jid').value, to=document.getElementById('c-to').value,
-      msg=document.getElementById('c-msg').value.trim(), st=document.getElementById('send-status');
-  if(!msg || !(jid||to)){ st.textContent='pick a chat + write the thing'; return; }
-  if(!confirm('Send to '+to+'?\n\n'+msg)) return;
-  b.disabled=true; st.textContent='sending… (sync naps ~5s)';
+function copyDraft(i){
+  var d=window._drafts[i];
+  navigator.clipboard.writeText(d.text).then(function(){ toast('draft copied','ok'); })
+    .catch(function(){
+      var ta=document.createElement('textarea'); ta.value=d.text; document.body.appendChild(ta);
+      ta.select(); try{document.execCommand('copy'); toast('draft copied','ok');}catch(e){toast('copy failed','err');}
+      ta.remove();
+    });
+}
+function doSend(){
+  var jid=document.getElementById('c-jid').value.trim();
+  var to=document.getElementById('c-to').value.trim();
+  var target=jid||to;
+  var name=jid?document.getElementById('c-chip-name').textContent:to;
+  var msg=document.getElementById('c-msg').value.trim();
+  var btn=document.getElementById('send-btn');
+  if(!target){ toast('pick a chat first (search + click a result)','err'); return; }
+  if(!msg){ toast('write a message first','err'); return; }
+  if(!confirm('Send to '+name+'?\n\n'+msg)) return;
+  btn.disabled=true; btn.textContent='sending…';
+  toast('sending to '+name+' (sync naps ~5s)…','info',5000);
   fetch('/send',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({to:jid||to,message:msg})})
+    body:JSON.stringify({to:target,message:msg})})
     .then(function(r){return r.json();})
-    .then(function(j){ st.textContent=j.ok?'✅ gone.':'❌ '+j.msg; if(j.ok){document.getElementById('c-msg').value='';} })
-    .catch(function(e){ st.textContent='❌ '+e; })
-    .finally(function(){ b.disabled=false; });
+    .then(function(j){
+      if(j.ok){ toast('sent to '+name,'ok'); document.getElementById('c-msg').value=''; clearChip(); }
+      else { toast('send failed: '+(j.msg||'unknown'),'err',6000); }
+    })
+    .catch(function(e){ toast('send error: '+e,'err',6000); })
+    .finally(function(){ btn.disabled=false; btn.textContent='send it'; });
 }
 function doMute(jid,name){
-  if(!confirm('Mute "'+name+'"? hidden till something new happens there. echo takes notes.')) return;
+  if(!confirm('Mute "'+name+'"?\n\nIt disappears from your loops until something NEW lands in that chat. Logged so echo learns your taste.')) return;
+  toast('muting '+name+'…','info',2000);
   fetch('/mute',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({jid:jid,name:name})})
-    .then(function(r){return r.json();}).then(function(){location.reload();});
+    .then(function(r){return r.json();})
+    .then(function(j){ if(j.ok){ toast('muted '+name+' — back when they resurface','ok'); setTimeout(function(){location.reload();},900); }
+                       else toast('mute failed: '+(j.msg||'?'),'err'); })
+    .catch(function(e){ toast('mute error: '+e,'err'); });
 }
 function render(key, mountId, opts){
   opts=opts||{};
-  var items=LISTS[key], el=document.getElementById(mountId);
+  var items=LISTS[key].slice();
+  if(key==='since' && sinceFilter==='unrep') items=items.filter(function(x){return x.unreplied;});
+  var el=document.getElementById(mountId);
   if(!items.length){ el.innerHTML='<div class="quiet">'+(opts.empty||'nothing here. clean.')+'</div>'; return; }
-  el.innerHTML = items.map(function(x,i){
-    var right = '<button class="abtn" data-act="compose" data-key="'+key+'" data-idx="'+i+'">✍️</button>';
-    if(!opts.noMute) right += '<button class="abtn mute" data-act="mute" data-key="'+key+'" data-idx="'+i+'">🔕</button>';
+  el.innerHTML = items.map(function(x){
+    var realIdx = LISTS[key].indexOf(x);
+    var right = '<button class="abtn" data-act="compose" data-key="'+key+'" data-idx="'+realIdx+'">✍️</button>';
+    if(!opts.noMute) right += '<button class="abtn mute" data-act="mute" data-key="'+key+'" data-idx="'+realIdx+'">🔕</button>';
     var age = x.silent_d!=null ? '<span class="age hot">'+x.silent_d+'d silent</span>'
             : x.age_h!=null ? '<span class="age'+(x.age_h>72?' hot':'')+'">'+ago(x.age_h)+'</span>' : '';
     return '<div class="card'+(x.priority===1?' p1':(x.src==='claude'?' claude':''))+'">'+right+age+
       '<span class="who">'+esc(x.name)+'</span>'+
       (x.priority===1?'<span class="tag p1">P1</span>':'')+
+      (x.unreplied?'<span class="tag unrep">waiting on you</span>':'')+
       (x.count?'<span class="tag">'+x.count+' new</span>':'')+
       (x.label&&x.label!=='dm'?'<span class="tag wg">'+esc(x.label)+'</span>':'')+
       (x.who_owes?'<span class="tag">'+(x.who_owes==='me'?'you owe':'they owe')+'</span>':'')+
       (x.meeting?'<span class="tag meet">📅</span>':'')+
-      (x.stale?'<span class="tag stale">⟳</span>':'')+
+      (x.stale?'<span class="tag stale">reeval</span>':'')+
       (x.what?'<div class="what">'+esc(x.what)+'</div>':'')+
       (x.next?'<div class="next">'+esc(x.next)+(x.due?' <span style="color:var(--amber)">(due '+esc(x.due)+')</span>':'')+'</div>':'')+
       (opts.noCtx?'':ctx(x.recent))+
@@ -275,7 +320,11 @@ document.addEventListener('click',function(e){
     return;
   }
   var m=e.target.closest('#menu button[data-view]');
-  if(m) showView(m.dataset.view);
+  if(m){ showView(m.dataset.view); return; }
+  var f=e.target.closest('.filterbar button[data-filt]');
+  if(f){ sinceFilter=f.dataset.filt;
+    document.querySelectorAll('.filterbar button').forEach(function(x){x.classList.toggle('on',x===f);});
+    render('since','l-since',{empty:'silence for 90 whole minutes. enjoy it.',noMute:true}); return; }
 });
 (function(){
   var staleMin = A.generated_ts ? Math.round((Date.now()/1000 - A.generated_ts)/60) : null;
@@ -285,54 +334,72 @@ document.addEventListener('click',function(e){
     ' · intelligence ' + (C.updated||'—') +
     ' · last message ' + (A.last_msg_age_min!=null?A.last_msg_age_min+'m ago':'?');
   var counts={close:LISTS.close_loop.length, chase:LISTS.chase.length, drafts:(C.drafts||[]).length,
-              dropped:LISTS.dropped.length, since:LISTS.since.length, personal:LISTS.personal.length};
+              dropped:LISTS.dropped.length, since:LISTS.since.filter(function(x){return x.unreplied;}).length, personal:LISTS.personal.length};
   for(var k in counts) document.getElementById('n-'+k).textContent=counts[k];
 
-  render('close_loop','l-close_loop',{empty:'inbox zero. who even are you ✨'});
+  render('close_loop','l-close_loop',{empty:'inbox zero. who even are you'});
   render('chase','l-chase',{empty:'nobody owes you anything. suspicious.'});
   render('dropped','l-dropped',{empty:'no dropped balls in 45 days. legend.'});
   render('personal','l-personal',{empty:'call your mom anyway.'});
-  render('since','l-since',{empty:'silence for 30 whole minutes. enjoy it.',noMute:true});
+  render('since','l-since',{empty:'nothing waiting on you in the last 90. enjoy it.',noMute:true});
 
   window._drafts = C.drafts||[];
   document.getElementById('drafts').innerHTML = window._drafts.map(function(d,i){
-    return '<div class="draft"><button class="use" data-draft="'+i+'">↑ compose</button>'+
-      '<div class="to">→ '+esc(d.to)+'</div>'+esc(d.text)+'</div>';
+    return '<div class="draft"><div class="acts">'+
+      '<button data-copy="'+i+'">copy</button>'+
+      '<button data-use="'+i+'">compose</button></div>'+
+      '<div class="to">to '+esc(d.to)+'</div>'+esc(d.text)+'</div>';
   }).join('') || '<div class="quiet">no drafts queued. the intelligence writes these.</div>';
   document.getElementById('drafts').addEventListener('click',function(e){
-    var b=e.target.closest('button[data-draft]');
-    if(b){var d=window._drafts[+b.dataset.draft]; loadCompose(d.jid||'',d.to,d.text);}
+    var u=e.target.closest('button[data-use]'); if(u){var d=window._drafts[+u.dataset.use]; loadCompose(d.jid||'',d.to,d.text); return;}
+    var c=e.target.closest('button[data-copy]'); if(c){ copyDraft(+c.dataset.copy); }
   });
 
   document.getElementById('groups').innerHTML =
     '<div class="card"><div class="what">'+esc(C.group_notes||'')+
     '<br>last clutter sweep: '+(C.last_group_sweep||'never')+' · next on ask or 2-day cadence</div></div>';
 
-  var to=document.getElementById('c-to'), sugg=document.getElementById('sugg'), t=null;
+  var to=document.getElementById('c-to'), sugg=document.getElementById('sugg'), t=null, hl=-1;
   window._sugg=[];
+  function renderSugg(){
+    if(!window._sugg.length){ sugg.style.display='none'; return; }
+    sugg.innerHTML=window._sugg.map(function(c,i){
+      return '<div data-pick="'+i+'" class="'+(i===hl?'hl':'')+'">'+esc(c.name)+
+        ' <span style="color:var(--dim);font-size:11px">'+c.kind+'</span></div>';
+    }).join('');
+    sugg.style.display='block';
+  }
   to.addEventListener('input',function(){
-    document.getElementById('c-jid').value='';
-    clearTimeout(t);
+    clearChip(); clearTimeout(t); hl=-1;
     var q=to.value.trim();
     if(q.length<2){ sugg.style.display='none'; return; }
     t=setTimeout(function(){
       fetch('/search?q='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(j){
-        window._sugg=j.results;
-        if(!j.results.length){ sugg.style.display='none'; return; }
-        sugg.innerHTML=j.results.map(function(c,i){
-          return '<div data-pick="'+i+'">'+esc(c.name)+' <span style="color:var(--dim);font-size:11px">'+c.kind+'</span></div>';
-        }).join('');
-        sugg.style.display='block';
-      });
-    },250);
+        window._sugg=j.results||[]; hl=-1; renderSugg();
+      }).catch(function(e){ toast('search failed: '+e,'err'); });
+    },220);
   });
+  to.addEventListener('keydown',function(e){
+    if(sugg.style.display!=='block') return;
+    if(e.key==='ArrowDown'){ hl=Math.min(hl+1,window._sugg.length-1); renderSugg(); e.preventDefault(); }
+    else if(e.key==='ArrowUp'){ hl=Math.max(hl-1,0); renderSugg(); e.preventDefault(); }
+    else if(e.key==='Enter'){ if(hl>=0){ pick(hl); e.preventDefault(); } }
+    else if(e.key==='Escape'){ sugg.style.display='none'; }
+  });
+  function pick(i){
+    var c=window._sugg[i]; if(!c) return;
+    setChip(c.jid,c.name); sugg.style.display='none';
+    toast('locked to '+c.name,'ok',1800);
+    document.getElementById('c-msg').focus();
+  }
+  window.pick=pick;
   sugg.addEventListener('mousedown',function(e){
     var d=e.target.closest('div[data-pick]');
-    if(d){var c=window._sugg[+d.dataset.pick];
-      document.getElementById('c-jid').value=c.jid; to.value=c.name; sugg.style.display='none';
-      e.preventDefault();}
+    if(d){ e.preventDefault(); pick(+d.dataset.pick); }
   });
-  document.addEventListener('click',function(e){ if(!sugg.contains(e.target)&&e.target!==to) sugg.style.display='none'; });
+  document.addEventListener('mousedown',function(e){
+    if(!sugg.contains(e.target)&&e.target!==to) sugg.style.display='none';
+  });
 
   showView(localStorage.getItem('echo_view') || 'v-close');
 })();
