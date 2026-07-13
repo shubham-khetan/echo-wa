@@ -1,27 +1,30 @@
 #!/bin/bash
-# Optional: create /Applications/Echo.app (Dock + Spotlight launcher)
+# Build /Applications/Echo.app — a thin launcher that opens Echo in a chromeless
+# Chrome/Brave app-window (own dock icon + isolated profile). Avoids WKWebView's
+# ScreenTime localhost shield, so send/search/mute work exactly like the browser.
 set -e
 APP='/Applications/Echo.app'
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cat > "$APP/Contents/Info.plist" << 'P'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>CFBundleName</key><string>Echo</string>
 <key>CFBundleIdentifier</key><string>sh.echo.app</string><key>CFBundleExecutable</key><string>echo</string>
-<key>CFBundleIconFile</key><string>icon</string><key>CFBundlePackageType</key><string>APPL</string><key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict></dict></plist>
+<key>CFBundleIconFile</key><string>icon</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>
 P
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-if command -v swiftc >/dev/null; then
-  echo 'Compiling native wrapper (dock indicator, real quit)…'
-  swiftc -O "$REPO_DIR/infra/echo_app.swift" -o "$APP/Contents/MacOS/echo" -framework Cocoa -framework WebKit
-else
-  cat > "$APP/Contents/MacOS/echo" << 'S'
+cat > "$APP/Contents/MacOS/echo" << 'S'
 #!/bin/bash
 URL='http://127.0.0.1:8787/WHATSAPP_DASHBOARD.html'
-[ -d '/Applications/Google Chrome.app' ] && exec open -na 'Google Chrome' --args --app="$URL" || exec open "$URL"
-S
-  chmod +x "$APP/Contents/MacOS/echo"
+if [ -d '/Applications/Google Chrome.app' ]; then
+  exec '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --app="$URL" --user-data-dir="$HOME/.echo/.chrome-echo"
+elif [ -d '/Applications/Brave Browser.app' ]; then
+  exec '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser' --app="$URL" --user-data-dir="$HOME/.echo/.chrome-echo"
+else
+  exec open "$URL"
 fi
+S
+chmod +x "$APP/Contents/MacOS/echo"
 python3 - << 'PY' || echo 'icon skipped (pip install pillow for the icon)'
 from PIL import Image, ImageDraw
 import math, os, subprocess
@@ -37,4 +40,4 @@ for z in (16,32,64,128,256,512,1024):
 subprocess.run(['iconutil','-c','icns','/tmp/echo.iconset','-o','/Applications/Echo.app/Contents/Resources/icon.icns'],check=True)
 PY
 codesign --force --deep -s - "$APP" 2>/dev/null || true
-echo '✅ Echo.app installed — find it in Spotlight, drag to Dock.'
+echo 'Echo.app installed - find it in Spotlight, drag to Dock.'
