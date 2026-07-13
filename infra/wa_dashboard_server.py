@@ -17,14 +17,16 @@ PORT = 8787
 UID = os.getuid()
 send_lock = threading.Lock()
 
-INTEL_PROMPT = ("WhatsApp intelligence run. FIRST: if file tools cannot see a path below, read it "
-                "via osascript (do shell script cat …) — never conclude a file is missing. "
-                "Follow /Users/shubham/Documents/Claude/Projects/Master Project/skills/whatsapp-intelligence/"
-                "SKILL.md end to end: re-verdict both queues (window context, calendar cross-ref "
-                "on meeting-flagged threads), triage the dropped-balls queue, respect user-mute "
-                "feedback in feedback_log.csv, update thread_state.json + claude_data.js + "
-                "heuristics_config.json lexicons, backfill conclusions into ACTIVE_THREADS, "
-                "advance STATE.json last_processed, then report the delta.")
+INTEL_PROMPT = ("Echo LEAN intelligence run — keep it quick, do NOT do a full sweep.\n"
+    "Data lives in ~/.wacli-cos/ (use osascript+sqlite3/cat if file tools can't see it).\n"
+    "1. Read STATE.json last_processed. Pull ONLY messages since then (osascript sqlite3 on store/wacli.db).\n"
+    "2. For chats with new activity: update their entry in thread_state.json — flip status "
+    "(close_loop / chase / closed), refresh what/next_action/anchor_ts. Add new real loops; "
+    "close ack-only threads. Skip anything unchanged — do not re-verdict the whole board.\n"
+    "3. Update claude_data.js drafts ONLY for items that changed. Keep drafts short.\n"
+    "4. Set STATE.json last_processed = now. Run: curl -s http://127.0.0.1:8787/refresh\n"
+    "SKIP: calendar cross-ref, dropped-ball deep scan, lexicon edits, ACTIVE_THREADS backfill, "
+    "group sweeps — unless I explicitly ask. Finish with a 2-3 line delta (what changed). That's it.")
 
 def run_refresh():
     try:
