@@ -10,12 +10,18 @@ cat > "$APP/Contents/Info.plist" << 'P'
 <key>CFBundleIdentifier</key><string>sh.echo.app</string><key>CFBundleExecutable</key><string>echo</string>
 <key>CFBundleIconFile</key><string>icon</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>
 P
-cat > "$APP/Contents/MacOS/echo" << 'S'
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+if command -v swiftc >/dev/null; then
+  echo 'Compiling native wrapper (dock indicator, real quit)…'
+  swiftc -O "$REPO_DIR/infra/echo_app.swift" -o "$APP/Contents/MacOS/echo" -framework Cocoa -framework WebKit
+else
+  cat > "$APP/Contents/MacOS/echo" << 'S'
 #!/bin/bash
 URL='http://127.0.0.1:8787/WHATSAPP_DASHBOARD.html'
 [ -d '/Applications/Google Chrome.app' ] && exec open -na 'Google Chrome' --args --app="$URL" || exec open "$URL"
 S
-chmod +x "$APP/Contents/MacOS/echo"
+  chmod +x "$APP/Contents/MacOS/echo"
+fi
 python3 - << 'PY' || echo 'icon skipped (pip install pillow for the icon)'
 from PIL import Image, ImageDraw
 import math, os, subprocess
