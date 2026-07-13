@@ -196,6 +196,16 @@
 <script>
 var A = window.WA_AUTO || {}, C = window.WA_CLAUDE || {};
 var LISTS = {close_loop:A.close_loop||[], chase:A.chase||[], dropped:A.dropped||[], personal:A.personal||[], since:A.since_last||[]};
+// unified call: native bridge (bypasses ScreenTime URL shield on localhost) or plain fetch
+function ecall(path, method, payloadObj){
+  var payload = payloadObj ? JSON.stringify(payloadObj) : '';
+  if(window.__ECHO_NATIVE && window.echoFetch){
+    return window.echoFetch(path, method||'GET', payload);
+  }
+  var opt = {method: method||'GET'};
+  if(payload){ opt.headers={'Content-Type':'application/json'}; opt.body=payload; }
+  return fetch(path, opt).then(function(r){return r.json();});
+}
 var sinceFilter = 'unrep';
 function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 function ago(h){ if(h<1) return Math.round(h*60)+'m'; if(h<48) return Math.round(h)+'h'; return Math.round(h/24)+'d'; }
@@ -219,12 +229,12 @@ function showView(id){
 function doRefresh(){
   var b=document.getElementById('refresh-btn'); b.disabled=true; b.textContent='refreshing…';
   toast('pulling fresh loops…','info',2000);
-  fetch('/refresh').then(function(r){return r.json();}).then(function(){location.reload();})
+  ecall('/refresh').then(function(){location.reload();})
     .catch(function(e){ b.disabled=false; b.textContent='↻ refresh'; toast('refresh failed: '+e,'err'); });
 }
 function doIntel(b){
   b.disabled=true;
-  fetch('/intel').then(function(r){return r.json();}).then(function(){
+  ecall('/intel').then(function(){
     toast('prompt copied → paste (Cmd+V) into Claude','ok',5000);
     b.textContent='🧠 copied — paste in Claude'; setTimeout(function(){b.disabled=false;b.textContent='🧠 intelligence';},4000);
   }).catch(function(e){ b.disabled=false; toast('could not reach Claude: '+e,'err'); });
@@ -264,9 +274,7 @@ function doSend(){
   if(!confirm('Send to '+name+'?\n\n'+msg)) return;
   btn.disabled=true; btn.textContent='sending…';
   toast('sending to '+name+' (sync naps ~5s)…','info',5000);
-  fetch('/send',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({to:target,message:msg})})
-    .then(function(r){return r.json();})
+  ecall('/send','POST',{to:target,message:msg})
     .then(function(j){
       if(j.ok){ toast('sent to '+name,'ok'); document.getElementById('c-msg').value=''; clearChip(); }
       else { toast('send failed: '+(j.msg||'unknown'),'err',6000); }
@@ -277,9 +285,7 @@ function doSend(){
 function doMute(jid,name){
   if(!confirm('Mute "'+name+'"?\n\nIt disappears from your loops until something NEW lands in that chat. Logged so echo learns your taste.')) return;
   toast('muting '+name+'…','info',2000);
-  fetch('/mute',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({jid:jid,name:name})})
-    .then(function(r){return r.json();})
+  ecall('/mute','POST',{jid:jid,name:name})
     .then(function(j){ if(j.ok){ toast('muted '+name+' — back when they resurface','ok'); setTimeout(function(){location.reload();},900); }
                        else toast('mute failed: '+(j.msg||'?'),'err'); })
     .catch(function(e){ toast('mute error: '+e,'err'); });
@@ -374,7 +380,7 @@ document.addEventListener('click',function(e){
     var q=to.value.trim();
     if(q.length<2){ sugg.style.display='none'; return; }
     t=setTimeout(function(){
-      fetch('/search?q='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(j){
+      ecall('/search?q='+encodeURIComponent(q)).then(function(j){
         window._sugg=j.results||[]; hl=-1; renderSugg();
       }).catch(function(e){ toast('search failed: '+e,'err'); });
     },220);
