@@ -8,7 +8,7 @@ cat > "$APP/Contents/Info.plist" << 'P'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>CFBundleName</key><string>Echo</string>
 <key>CFBundleIdentifier</key><string>sh.echo.app</string><key>CFBundleExecutable</key><string>echo</string>
-<key>CFBundleIconFile</key><string>icon</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>
+<key>CFBundleIconFile</key><string>icon</string><key>CFBundlePackageType</key><string>APPL</string><key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict></dict></plist>
 P
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 if command -v swiftc >/dev/null; then
