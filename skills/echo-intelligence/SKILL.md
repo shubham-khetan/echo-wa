@@ -4,22 +4,34 @@
 > dashboard's 🧠 button, "what's on WhatsApp", or automatically inside CoS-style runs.
 > The mechanical engine runs without the assistant; THIS skill is what makes it smart.
 
-## ⚡ LEAN MODE — this is the DEFAULT. Keep runs quick.
+## ⚡ LEAN MODE — this is the DEFAULT. Fast, but NOT a dumb dump.
 
-Unless you explicitly ask for a "deep" / "full" run, do ONLY this (2-3 min, incremental):
+Unless explicitly asked for a "deep" / "full" run, do this (aim for 3-5 min — lean means scoped,
+not shallow; the point is the user shouldn't have to think, you should):
 
-1. Read `STATE.json` last_processed. Pull ONLY messages since then (osascript + sqlite3 on
-   `store/wacli.db`) — not the whole board.
-2. For chats with NEW activity only: update their entry in `thread_state.json` — flip status
-   (close_loop / chase / closed), refresh what / next_action / anchor_ts. Add genuinely new loops;
-   close ack-only threads. Leave unchanged chats untouched — do NOT re-verdict everything.
-3. Refresh `claude_data.js` drafts ONLY for items that moved. Keep drafts short.
-4. Set `STATE.json` last_processed = now. `curl -s http://127.0.0.1:8787/refresh`.
-5. Report a 2-3 line delta (what changed). Done.
+1. Read `STATE.json` last_processed. Pull ALL messages since then across ALL chats (osascript +
+   sqlite3 on `store/wacli.db`) — not just the tracked/known set. New activity in an untracked
+   chat is exactly what a lazy run would miss.
+2. **Re-verdict, don't just flag, every chat with new activity** — including chats already in
+   `thread_state.json`. Read the actual new messages in context and update status/what/next_action/
+   anchor_ts accordingly. A conversation that moved from "I owe them" to "they owe me" must flip
+   buckets THIS run, not sit stale until a deep sweep. This is the single most important behavior.
+3. **Discover genuinely new open threads**: any chat (tracked or not) with new activity that reads
+   as an open loop gets added to thread_state.json even if it was never explicitly flagged before.
+   Don't wait for a tracking file to say a chat matters — a live open thread matters on its own.
+   (Chats marked `no`/`archive` in relevance_overrides.csv remain a hard exclusion.)
+4. **Validate existing drafts before leaving them queued**: for every draft in claude_data.js, check
+   whether the underlying thread moved since the draft was written. Stale/resolved drafts get dropped
+   or rewritten — never leave a draft proposing something already said or no longer true.
+5. Refresh `claude_data.js`: drafts for anything that changed, kept short and current.
+6. Set `STATE.json` last_processed = now. `curl -s http://127.0.0.1:8787/refresh`.
+7. Report a genuine delta — what moved, what's newly open, what you dropped/rewrote — in 3-5
+   lines. Not an inventory dump, not silence either.
 
-**SKIP in lean mode** (only do when explicitly asked): calendar cross-ref, deep dropped-ball scan,
-lexicon edits to `heuristics_config.json`, activity backfill, group sweeps. The full
-procedure below is the DEEP run — reference it only on explicit request.
+**SKIP in lean mode** (only do when asked): full calendar cross-ref, deep dropped-ball scan, lexicon
+edits, activity backfill, group clutter/signal sweeps — these are expensive and rarely change
+run-to-run. Everything above (re-verdicting, discovery, draft validation) is NOT optional — that's
+the difference between a script and an assistant. The full procedure below is the DEEP run.
 
 ---
 
