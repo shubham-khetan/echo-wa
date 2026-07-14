@@ -16,10 +16,26 @@ P
 cat > "$APP/Contents/MacOS/echo" << 'S'
 #!/bin/bash
 URL='http://127.0.0.1:8787/WHATSAPP_DASHBOARD.html'
+PROFILE="$HOME/.echo/.chrome-echo"
+
+# The Echo window is a plain "Google Chrome" process under the hood (macOS has
+# no separate "Echo" app identity for it once spawned). Re-invoking this
+# launcher while it's already running does NOT reactivate the existing window
+# -- exec'''ing a fresh Chrome --app invocation can get misrouted by macOS/Chrome'''s
+# single-instance IPC into the ALREADY-RUNNING DEFAULT Chrome profile instead,
+# opening a stray new tab there. Fix: if the dedicated Echo Chrome process is
+# already alive (found via its unique --user-data-dir), bring THAT process
+# forward by PID via System Events instead of launching anything new.
+PID=$(pgrep -f -- "--user-data-dir=$PROFILE" | head -1)
+if [ -n "$PID" ]; then
+  osascript -e "tell application \"System Events\" to set frontmost of (first process whose unix id is $PID) to true" > /dev/null 2>&1
+  exit 0
+fi
+
 if [ -d '/Applications/Google Chrome.app' ]; then
-  exec '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --app="$URL" --user-data-dir="$HOME/.echo/.chrome-echo"
+  exec '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --app="$URL" --user-data-dir="$PROFILE" --class=Echo
 elif [ -d '/Applications/Brave Browser.app' ]; then
-  exec '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser' --app="$URL" --user-data-dir="$HOME/.echo/.chrome-echo"
+  exec '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser' --app="$URL" --user-data-dir="$PROFILE"
 else
   exec open "$URL"
 fi
