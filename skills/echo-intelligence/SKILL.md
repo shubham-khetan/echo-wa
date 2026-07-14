@@ -40,7 +40,7 @@ access (osascript on macOS, or a shell tool) for everything here.
 | `STATE.json` | **assistant** | last_processed cursor + last_group_sweep |
 | `infra/` | — | engine (wa_dashboard_refresh.py), server (wa_dashboard_server.py), plists |
 
-Dashboard: http://127.0.0.1:8787/WHATSAPP_DASHBOARD.html · server endpoints: /refresh /search?q= /send /intel /relevance
+Dashboard: http://127.0.0.1:8787/WHATSAPP_DASHBOARD.html · server endpoints: /refresh /search?q= /send /intel /relevance /flip /dismiss-draft
 
 ## Verdict schema (thread_state.json, keyed by jid)
 
@@ -48,10 +48,30 @@ Dashboard: http://127.0.0.1:8787/WHATSAPP_DASHBOARD.html · server endpoints: /r
 `priority`: 1 = highest priority · 2 = normal · 3 = personal/low
 `what` (situation, ≤140c) · `next_action` (concrete move) · `due` (ISO date) ·
 `anchor_ts` (newest message ts the verdict covers — set to chat's MAX(ts)) · `verdict_ts` · `source: assistant`
+(`source` also takes `user-mute`, `user-flip`, `user-dismiss` — all three are hard user overrides
+and should never be silently reversed by a re-verdict; if the situation genuinely changed, ask or let
+new messages trigger the ⏳-stale path naturally.)
 
 **Merge rules the engine enforces:** verdicts OVERRIDE labels (an `ignore` chat with a live verdict
 still surfaces). New messages after anchor_ts ⇒ item flagged ⟳ re-evaluate.
 closed/snoozed + new inbound ⇒ auto-reopens as heuristic.
+
+## Manual overrides (dashboard)
+
+Three self-serve controls in the UI so corrections do not need to route through a chat session:
+
+- **🎛 Manual override tab**: search ANY chat (group or DM, even ones that never surfaced
+  before) and set relevant=yes/no/archive directly — same `/relevance` endpoint and
+  `relevance_overrides.csv` gate described below. Fastest way to pre-triage a chat before it ever
+  shows up as noise.
+- **✕ dismiss on drafts**: each draft in claude_data.js has a dismiss button. Hitting it calls
+  `/dismiss-draft`, which writes `thread_state.json[jid] = {status: closed, source: user-dismiss}`
+  and removes the draft from claude_data.js. Treat this like an assistant-authored `closed` verdict
+  — do NOT re-open it in a future run unless genuinely new messages arrive after the dismiss.
+- **⇄ flip on close_loop/chase cards**: corrects a wrong bucket call directly — flips
+  close_loop↔chase via `/flip`, writing a `source: user-flip` verdict. If a future run's own
+  classification disagrees with a `user-flip`/`user-dismiss`/`user-mute` verdict, trust the user's
+  override, not the heuristic.
 
 ## Relevance layer (`relevance_overrides.csv`) — the deterministic, permanent yes/no list
 

@@ -78,6 +78,27 @@
   .abtn.mute:hover{color:var(--amber);border-color:var(--amber);}
   .abtn.rel-yes:hover{color:var(--wa);border-color:var(--wa);}
   .abtn.rel-no:hover{color:var(--red);border-color:var(--red);}
+  .abtn.flip:hover{color:var(--blue);border-color:var(--blue);}
+  .draft .acts button.dismiss{color:#ffb0b0;}
+  #override{background:var(--panel);border:1.5px solid var(--border);border-radius:18px;padding:18px;}
+  #override .row{display:flex;gap:8px;margin-bottom:10px;position:relative;}
+  #override input{background:var(--bubble);border:1.5px solid transparent;border-radius:12px;
+      color:var(--text);padding:11px 14px;font-size:14px;font-family:inherit;width:100%;}
+  #override input:focus{outline:none;border-color:var(--teal);}
+  #o-chip{display:none;align-items:center;gap:8px;background:var(--mine);color:#e7fce3;border-radius:12px;
+      padding:9px 14px;font-size:13.5px;font-weight:600;margin-bottom:10px;}
+  #o-chip.on{display:flex;}
+  #o-chip button{margin-left:auto;background:none;border:none;color:#c3f5d9;cursor:pointer;font-size:16px;}
+  #o-sugg{position:absolute;top:100%;left:0;right:0;background:var(--bubble);border:1.5px solid var(--border);
+      border-radius:12px;z-index:30;max-height:240px;overflow:auto;display:none;margin-top:4px;}
+  #o-sugg div{padding:11px 14px;font-size:13.5px;cursor:pointer;}
+  #o-sugg div:hover,#o-sugg div.hl{background:var(--panel);color:var(--wa);}
+  .o-opts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+  .o-opts button{font-family:inherit;background:var(--bubble);border:1.5px solid var(--border);color:var(--text);
+      border-radius:999px;padding:8px 16px;font-size:13px;cursor:pointer;}
+  .o-opts button:hover{border-color:var(--wa);}
+  .o-opts button.danger:hover{border-color:var(--red);color:var(--red);}
+  .o-opts button.good:hover{border-color:var(--wa);color:var(--wa);}
   .ctx{margin-top:8px;border-top:1px dashed var(--border);padding-top:7px;font-size:12.5px;line-height:1.6;color:var(--dim);}
   .ctx .m b{color:var(--text);font-weight:600;}
   .draft{background:var(--mine);border-radius:14px 14px 4px 14px;padding:12px 15px;margin-bottom:10px;
@@ -136,6 +157,7 @@
   <button data-view="v-personal">💛 your people<b id="n-personal">–</b></button>
   <button data-view="v-compose">✍️ compose</button>
   <button data-view="v-groups">👥 the herd</button>
+  <button data-view="v-override">🎛 manual override</button>
 </div>
 
 <div class="view" id="v-close"><div class="viewhead">
@@ -180,6 +202,18 @@
   </div>
 </div>
 
+<div class="view" id="v-override"><div class="viewhead">
+  <h2><span class="scribble">Manual override</span> 🎛</h2><p>search ANY chat and set how it should be treated. this always wins.</p></div>
+  <div id="override">
+    <div id="o-chip"><span id="o-chip-name"></span><button onclick="clearOChip()" title="clear">✕</button></div>
+    <div class="row"><input id="o-search" placeholder="search a chat by name…" autocomplete="off"><div id="o-sugg"></div></div>
+    <div class="o-opts">
+      <button class="good" onclick="doOverride('yes')">👍 mark relevant</button>
+      <button class="danger" onclick="doOverride('no')">👎 not relevant</button>
+      <button onclick="doOverride('archive')">📦 archive (served its purpose)</button>
+    </div>
+  </div>
+</div>
 <div class="view" id="v-groups"><div class="viewhead">
   <h2><span class="scribble">The herd</span> 👥</h2><p>groups, tamed. clutter gets a 2-day sweep, not your attention.</p>
 </div><div id="groups"></div></div>
@@ -301,6 +335,42 @@ function doRelevance(jid,name,relevant){
                        else toast('save failed: '+(j.msg||'?'),'err'); })
     .catch(function(e){ toast('relevance error: '+e,'err'); });
 }
+function doFlip(jid,name,newStatus){
+  var label = newStatus==='chase' ? 'flip to THEY OWE (chase)' : 'flip to YOU OWE (close the loop)';
+  if(!confirm(label+' for "'+name+'"?')) return;
+  toast('flipping '+name+'…','info',2000);
+  ecall('/flip','POST',{jid:jid,name:name,status:newStatus})
+    .then(function(j){ if(j.ok){ toast(name+' flipped','ok'); setTimeout(function(){location.reload();},900); }
+                       else toast('flip failed: '+(j.msg||'?'),'err'); })
+    .catch(function(e){ toast('flip error: '+e,'err'); });
+}
+function doDismissDraft(jid,name,idx){
+  if(!confirm('Dismiss draft for "'+name+'"?\n\nThis closes the loop — it will not come back as a draft or open item unless something new happens.')) return;
+  toast('dismissing draft for '+name+'…','info',2000);
+  ecall('/dismiss-draft','POST',{jid:jid,name:name})
+    .then(function(j){ if(j.ok){ toast('dismissed '+name,'ok'); setTimeout(function(){location.reload();},900); }
+                       else toast('dismiss failed: '+(j.msg||'?'),'err'); })
+    .catch(function(e){ toast('dismiss error: '+e,'err'); });
+}
+function setOChip(jid,name){
+  window._oJid = jid||''; window._oName = name||'';
+  var chip=document.getElementById('o-chip');
+  if(jid){ document.getElementById('o-chip-name').textContent=name; chip.classList.add('on');
+           document.getElementById('o-search').value=''; document.getElementById('o-search').placeholder='chat locked — clear (x) to change'; }
+  else { chip.classList.remove('on'); document.getElementById('o-search').placeholder='search a chat by name…'; }
+}
+function clearOChip(){ setOChip('',''); document.getElementById('o-search').focus(); }
+function doOverride(relevant){
+  var jid=window._oJid, name=window._oName;
+  if(!jid){ toast('pick a chat first (search + click a result)','err'); return; }
+  var label = relevant==='yes' ? 'mark RELEVANT' : relevant==='no' ? 'mark NOT RELEVANT (muted, weekly sweep only)' : 'ARCHIVE (served its purpose, done)';
+  if(!confirm(label+' for "'+name+'"?')) return;
+  toast('saving override for '+name+'…','info',2000);
+  ecall('/relevance','POST',{jid:jid,name:name,relevant:relevant})
+    .then(function(j){ if(j.ok){ toast(name+' marked '+relevant,'ok'); setTimeout(function(){location.reload();},900); }
+                       else toast('save failed: '+(j.msg||'?'),'err'); })
+    .catch(function(e){ toast('override error: '+e,'err'); });
+}
 function render(key, mountId, opts){
   opts=opts||{};
   var items=LISTS[key].slice();
@@ -314,6 +384,9 @@ function render(key, mountId, opts){
     if(x.label && x.label!=='dm' && x.label!=='personal'){
       right += '<button class="abtn rel-yes" title="relevant" data-act="rel-yes" data-key="'+key+'" data-idx="'+realIdx+'">👍</button>';
       right += '<button class="abtn rel-no" title="not relevant" data-act="rel-no" data-key="'+key+'" data-idx="'+realIdx+'">👎</button>';
+    }
+    if(key==='close_loop' || key==='chase'){
+      right += '<button class="abtn flip" title="flip to other bucket" data-act="flip" data-key="'+key+'" data-idx="'+realIdx+'">⇄</button>';
     }
     var age = x.silent_d!=null ? '<span class="age hot">'+x.silent_d+'d silent</span>'
             : x.age_h!=null ? '<span class="age'+(x.age_h>72?' hot':'')+'">'+ago(x.age_h)+'</span>' : '';
@@ -340,6 +413,7 @@ document.addEventListener('click',function(e){
     if(b.dataset.act==='mute') doMute(x.jid,x.name);
     if(b.dataset.act==='rel-yes') doRelevance(x.jid,x.name,'yes');
     if(b.dataset.act==='rel-no') doRelevance(x.jid,x.name,'no');
+    if(b.dataset.act==='flip') doFlip(x.jid,x.name, key==='close_loop' ? 'chase' : 'close_loop');
     return;
   }
   var m=e.target.closest('#menu button[data-view]');
@@ -370,12 +444,14 @@ document.addEventListener('click',function(e){
   document.getElementById('drafts').innerHTML = window._drafts.map(function(d,i){
     return '<div class="draft"><div class="acts">'+
       '<button data-copy="'+i+'">copy</button>'+
-      '<button data-use="'+i+'">compose</button></div>'+
+      '<button data-use="'+i+'">compose</button>'+
+      '<button data-dismiss="'+i+'" class="dismiss">✕ dismiss</button></div>'+
       '<div class="to">to '+esc(d.to)+'</div>'+esc(d.text)+'</div>';
   }).join('') || '<div class="quiet">no drafts queued. the intelligence writes these.</div>';
   document.getElementById('drafts').addEventListener('click',function(e){
     var u=e.target.closest('button[data-use]'); if(u){var d=window._drafts[+u.dataset.use]; loadCompose(d.jid||'',d.to,d.text); return;}
-    var c=e.target.closest('button[data-copy]'); if(c){ copyDraft(+c.dataset.copy); }
+    var c=e.target.closest('button[data-copy]'); if(c){ copyDraft(+c.dataset.copy); return; }
+    var x=e.target.closest('button[data-dismiss]'); if(x){ var dd=window._drafts[+x.dataset.dismiss]; if(dd.jid) doDismissDraft(dd.jid,dd.to); else toast('this draft has no linked chat id, cannot dismiss','err'); return; }
   });
 
   document.getElementById('groups').innerHTML =
@@ -422,6 +498,47 @@ document.addEventListener('click',function(e){
   });
   document.addEventListener('mousedown',function(e){
     if(!sugg.contains(e.target)&&e.target!==to) sugg.style.display='none';
+  });
+
+  var oto=document.getElementById('o-search'), osugg=document.getElementById('o-sugg'), ot=null, ohl=-1;
+  window._osugg=[];
+  function renderOSugg(){
+    if(!window._osugg.length){ osugg.style.display='none'; return; }
+    osugg.innerHTML=window._osugg.map(function(c,i){
+      return '<div data-opick="'+i+'" class="'+(i===ohl?'hl':'')+'">'+esc(c.name)+
+        ' <span style="color:var(--dim);font-size:11px">'+c.kind+'</span></div>';
+    }).join('');
+    osugg.style.display='block';
+  }
+  oto.addEventListener('input',function(){
+    clearOChip(); clearTimeout(ot); ohl=-1;
+    var q=oto.value.trim();
+    if(q.length<2){ osugg.style.display='none'; return; }
+    ot=setTimeout(function(){
+      ecall('/search?q='+encodeURIComponent(q)).then(function(j){
+        window._osugg=j.results||[]; ohl=-1; renderOSugg();
+      }).catch(function(e){ toast('search failed: '+e,'err'); });
+    },220);
+  });
+  oto.addEventListener('keydown',function(e){
+    if(osugg.style.display!=='block') return;
+    if(e.key==='ArrowDown'){ ohl=Math.min(ohl+1,window._osugg.length-1); renderOSugg(); e.preventDefault(); }
+    else if(e.key==='ArrowUp'){ ohl=Math.max(ohl-1,0); renderOSugg(); e.preventDefault(); }
+    else if(e.key==='Enter'){ if(ohl>=0){ opick(ohl); e.preventDefault(); } }
+    else if(e.key==='Escape'){ osugg.style.display='none'; }
+  });
+  function opick(i){
+    var c=window._osugg[i]; if(!c) return;
+    setOChip(c.jid,c.name); osugg.style.display='none';
+    toast('locked to '+c.name,'ok',1800);
+  }
+  window.opick=opick;
+  osugg.addEventListener('mousedown',function(e){
+    var d=e.target.closest('div[data-opick]');
+    if(d){ e.preventDefault(); opick(+d.dataset.opick); }
+  });
+  document.addEventListener('mousedown',function(e){
+    if(!osugg.contains(e.target)&&e.target!==oto) osugg.style.display='none';
   });
 
   showView(localStorage.getItem('echo_view') || 'v-close');

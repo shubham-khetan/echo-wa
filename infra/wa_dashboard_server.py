@@ -13,6 +13,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT = os.path.join(BASE, "infra", "wa_dashboard_refresh.py")
 DB = os.path.join(BASE, "store", "wacli.db")
 REL = os.path.join(BASE, "relevance_overrides.csv")
+CLAUDE_DATA = os.path.join(BASE, "claude_data.js")
 WACLI = "/opt/homebrew/bin/wacli"
 PORT = 8787
 UID = os.getuid()
@@ -85,6 +86,49 @@ def do_relevance(jid, name, relevant, priority, note):
         w.writerows(rows)
 
 
+def _read_claude_js():
+    import re
+    if not os.path.exists(CLAUDE_DATA): return None, None
+    txt = open(CLAUDE_DATA).read()
+    m = re.search(r"window\.WA_CLAUDE\s*=\s*(\{.*\});\s*$", txt, re.S)
+    if not m: return None, None
+    return json.loads(m.group(1)), txt
+
+def _write_claude_js(obj):
+    with open(CLAUDE_DATA, "w") as f:
+        f.write("window.WA_CLAUDE = " + json.dumps(obj, ensure_ascii=False) + ";\n")
+
+def do_flip(jid, name, new_status):
+    ts_path = os.path.join(BASE, "thread_state.json")
+    state = json.load(open(ts_path)) if os.path.exists(ts_path) else {}
+    con = sqlite3.connect("file:%s?mode=ro" % DB, uri=True)
+    mx = con.execute("SELECT MAX(ts) FROM messages WHERE chat_jid=?", (jid,)).fetchone()[0] or 0
+    con.close()
+    prev = state.get(jid, {})
+    state[jid] = dict(status=new_status, who_owes=("me" if new_status=="close_loop" else "them"),
+                      priority=prev.get("priority", 2), what=prev.get("what", "manually flipped by user"),
+                      next_action=prev.get("next_action", ""), anchor_ts=mx,
+                      verdict_ts=int(time.time()), source="user-flip")
+    json.dump(state, open(ts_path, "w"), indent=2, ensure_ascii=False)
+
+def do_dismiss_draft(jid, name):
+    ts_path = os.path.join(BASE, "thread_state.json")
+    state = json.load(open(ts_path)) if os.path.exists(ts_path) else {}
+    con = sqlite3.connect("file:%s?mode=ro" % DB, uri=True)
+    mx = con.execute("SELECT MAX(ts) FROM messages WHERE chat_jid=?", (jid,)).fetchone()[0] or 0
+    con.close()
+    prev = state.get(jid, {})
+    state[jid] = dict(status="closed", who_owes=None, priority=prev.get("priority", 3),
+                      what=prev.get("what", "manually dismissed by user"),
+                      next_action="", anchor_ts=mx, verdict_ts=int(time.time()),
+                      source="user-dismiss")
+    json.dump(state, open(ts_path, "w"), indent=2, ensure_ascii=False)
+    obj, _ = _read_claude_js()
+    if obj:
+        obj["drafts"] = [d for d in obj.get("drafts", []) if (d.get("jid") or "") != jid]
+        _write_claude_js(obj)
+
+
 def search_chats(q):
     con = sqlite3.connect("file:%s?mode=ro" % DB, uri=True)
     rows = con.execute("""SELECT jid, name, kind FROM chats
@@ -138,6 +182,26 @@ class H(http.server.SimpleHTTPRequestHandler):
                 return self._json({"ok": False, "msg": "missing/invalid jid or relevant"}, 400)
             try:
                 do_relevance(jid, p.get("name",""), relevant, p.get("priority",""), p.get("note",""))
+                run_refresh()
+                return self._json({"ok": True})
+            except Exception as e:
+                return self._json({"ok": False, "msg": str(e)}, 500)
+        if u.path == "/flip":
+            jid = (p.get("jid") or "").strip()
+            new_status = (p.get("status") or "").strip()
+            if not jid or new_status not in ("close_loop","chase"):
+                return self._json({"ok": False, "msg": "missing/invalid jid or status"}, 400)
+            try:
+                do_flip(jid, p.get("name",""), new_status)
+                run_refresh()
+                return self._json({"ok": True})
+            except Exception as e:
+                return self._json({"ok": False, "msg": str(e)}, 500)
+        if u.path == "/dismiss-draft":
+            jid = (p.get("jid") or "").strip()
+            if not jid: return self._json({"ok": False, "msg": "missing jid"}, 400)
+            try:
+                do_dismiss_draft(jid, p.get("name",""))
                 run_refresh()
                 return self._json({"ok": True})
             except Exception as e:
