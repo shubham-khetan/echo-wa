@@ -428,7 +428,7 @@ document.addEventListener('click',function(e){
   if(staleMin !== null && staleMin > 45) document.getElementById('live-dot').classList.add('stale');
   document.getElementById('meta').textContent =
     'engine ' + (A.generated||'?') + (staleMin!==null?' ('+staleMin+'m ago)':'') +
-    ' · intelligence ' + (C.updated||'—') +
+    ' · intelligence ' + (A.last_intel||C.updated||'—') +
     ' · last message ' + (A.last_msg_age_min!=null?A.last_msg_age_min+'m ago':'?');
   var counts={close:LISTS.close_loop.length, chase:LISTS.chase.length, drafts:(C.drafts||[]).length,
               dropped:LISTS.dropped.length, since:LISTS.since.filter(function(x){return x.unreplied;}).length, personal:LISTS.personal.length};
