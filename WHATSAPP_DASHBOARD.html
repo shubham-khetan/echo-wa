@@ -76,6 +76,8 @@
         border-radius:999px;padding:2px 9px;font-size:11px;cursor:pointer;transition:all .12s;font-family:inherit;}
   .abtn:hover{color:var(--wa);border-color:var(--wa);transform:scale(1.1);}
   .abtn.mute:hover{color:var(--amber);border-color:var(--amber);}
+  .abtn.rel-yes:hover{color:var(--wa);border-color:var(--wa);}
+  .abtn.rel-no:hover{color:var(--red);border-color:var(--red);}
   .ctx{margin-top:8px;border-top:1px dashed var(--border);padding-top:7px;font-size:12.5px;line-height:1.6;color:var(--dim);}
   .ctx .m b{color:var(--text);font-weight:600;}
   .draft{background:var(--mine);border-radius:14px 14px 4px 14px;padding:12px 15px;margin-bottom:10px;
@@ -290,6 +292,15 @@ function doMute(jid,name){
                        else toast('mute failed: '+(j.msg||'?'),'err'); })
     .catch(function(e){ toast('mute error: '+e,'err'); });
 }
+function doRelevance(jid,name,relevant){
+  var label = relevant==='yes' ? 'mark RELEVANT (keeps surfacing)' : 'mark NOT RELEVANT (permanently muted, weekly sweep only)';
+  if(!confirm(label+' for "'+name+'"?')) return;
+  toast('saving relevance for '+name+'…','info',2000);
+  ecall('/relevance','POST',{jid:jid,name:name,relevant:relevant})
+    .then(function(j){ if(j.ok){ toast(name+' marked '+relevant,'ok'); setTimeout(function(){location.reload();},900); }
+                       else toast('save failed: '+(j.msg||'?'),'err'); })
+    .catch(function(e){ toast('relevance error: '+e,'err'); });
+}
 function render(key, mountId, opts){
   opts=opts||{};
   var items=LISTS[key].slice();
@@ -300,6 +311,10 @@ function render(key, mountId, opts){
     var realIdx = LISTS[key].indexOf(x);
     var right = '<button class="abtn" data-act="compose" data-key="'+key+'" data-idx="'+realIdx+'">✍️</button>';
     if(!opts.noMute) right += '<button class="abtn mute" data-act="mute" data-key="'+key+'" data-idx="'+realIdx+'">🔕</button>';
+    if(x.label && x.label!=='dm' && x.label!=='personal'){
+      right += '<button class="abtn rel-yes" title="relevant" data-act="rel-yes" data-key="'+key+'" data-idx="'+realIdx+'">👍</button>';
+      right += '<button class="abtn rel-no" title="not relevant" data-act="rel-no" data-key="'+key+'" data-idx="'+realIdx+'">👎</button>';
+    }
     var age = x.silent_d!=null ? '<span class="age hot">'+x.silent_d+'d silent</span>'
             : x.age_h!=null ? '<span class="age'+(x.age_h>72?' hot':'')+'">'+ago(x.age_h)+'</span>' : '';
     return '<div class="card'+(x.priority===1?' p1':(x.src==='claude'?' claude':''))+'">'+right+age+
@@ -323,6 +338,8 @@ document.addEventListener('click',function(e){
     var x=LISTS[b.dataset.key][+b.dataset.idx];
     if(b.dataset.act==='compose') loadCompose(x.jid,x.name);
     if(b.dataset.act==='mute') doMute(x.jid,x.name);
+    if(b.dataset.act==='rel-yes') doRelevance(x.jid,x.name,'yes');
+    if(b.dataset.act==='rel-no') doRelevance(x.jid,x.name,'no');
     return;
   }
   var m=e.target.closest('#menu button[data-view]');

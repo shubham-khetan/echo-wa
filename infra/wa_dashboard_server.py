@@ -12,6 +12,7 @@ from urllib.parse import urlparse, parse_qs
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT = os.path.join(BASE, "infra", "wa_dashboard_refresh.py")
 DB = os.path.join(BASE, "store", "wacli.db")
+REL = os.path.join(BASE, "relevance_overrides.csv")
 WACLI = "/opt/homebrew/bin/wacli"
 PORT = 8787
 UID = os.getuid()
@@ -69,6 +70,21 @@ def do_mute(jid, name):
     with open(os.path.join(BASE, "feedback_log.csv"), "a") as f:
         f.write("%d,mute,%s,%s\n" % (int(time.time()), jid, name.replace(",", " ")))
 
+def do_relevance(jid, name, relevant, priority, note):
+    import csv
+    rows = []
+    if os.path.exists(REL):
+        with open(REL) as f:
+            rows = list(csv.DictReader(f))
+    rows = [r for r in rows if r["jid"].strip() != jid]
+    rows.append(dict(jid=jid, relevant=relevant, priority=priority or "normal",
+                     note=note or ("toggled from dashboard: " + name)))
+    with open(REL, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["jid","relevant","priority","note"])
+        w.writeheader()
+        w.writerows(rows)
+
+
 def search_chats(q):
     con = sqlite3.connect("file:%s?mode=ro" % DB, uri=True)
     rows = con.execute("""SELECT jid, name, kind FROM chats
@@ -111,6 +127,17 @@ class H(http.server.SimpleHTTPRequestHandler):
             if not jid: return self._json({"ok": False, "msg": "missing jid"}, 400)
             try:
                 do_mute(jid, p.get("name", ""))
+                run_refresh()
+                return self._json({"ok": True})
+            except Exception as e:
+                return self._json({"ok": False, "msg": str(e)}, 500)
+        if u.path == "/relevance":
+            jid = (p.get("jid") or "").strip()
+            relevant = (p.get("relevant") or "").strip().lower()
+            if not jid or relevant not in ("yes","no","archive"):
+                return self._json({"ok": False, "msg": "missing/invalid jid or relevant"}, 400)
+            try:
+                do_relevance(jid, p.get("name",""), relevant, p.get("priority",""), p.get("note",""))
                 run_refresh()
                 return self._json({"ok": True})
             except Exception as e:

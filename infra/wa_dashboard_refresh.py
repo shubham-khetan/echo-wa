@@ -10,6 +10,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB = os.path.join(BASE, "store", "wacli.db")
 OUT = os.path.join(BASE, "dashboard_data.js")
 OVR = os.path.join(BASE, "label_overrides.csv")
+REL = os.path.join(BASE, "relevance_overrides.csv")
 CFG = os.path.join(BASE, "heuristics_config.json")
 TS = os.path.join(BASE, "thread_state.json")
 ST = os.path.join(BASE, "STATE.json")
@@ -33,6 +34,11 @@ if os.path.exists(ST):
     except Exception: pass
 
 overrides = {}
+relevance = {}
+if os.path.exists(REL):
+    for row in csv.DictReader(open(REL)):
+        relevance[row["jid"].strip()] = dict(relevant=row["relevant"].strip().lower(),
+                                              priority=row.get("priority","").strip().lower())
 if os.path.exists(OVR):
     for row in csv.DictReader(open(OVR)):
         overrides[row["jid"].strip()] = row["label"].strip()
@@ -109,11 +115,15 @@ active = {r[0] for r in con.execute("SELECT DISTINCT chat_jid FROM messages WHER
 for jid in active | set(state.keys()):
     ch = chats.get(jid)
     if not ch: continue
+    rel = relevance.get(jid)
+    # Hard relevance gate — Shubham's explicit yes/no/archive OVERRIDES everything else, always.
+    if rel and rel["relevant"] in ("no", "archive"): continue
     v = state.get(jid)
     label = ch["label"]
     # Without a Claude verdict: ignore/clutter/signal chats are skipped; unnamed DMs skipped.
     unnamed = ch["name"].endswith("@s.whatsapp.net") or ch["name"].endswith("@g.us")
-    if not v and (label in ("ignore", "clutter", "signal-group") or unnamed): continue
+    is_relevant_yes = rel and rel["relevant"] == "yes"
+    if not v and not is_relevant_yes and (label in ("ignore", "clutter", "signal-group") or unnamed): continue
 
     res = classify(jid) or ("closed", "", now, False)
     status, what, anchor, meet = res
@@ -134,8 +144,10 @@ for jid in active | set(state.keys()):
                         src="claude", stale=stale, priority=v.get("priority", 2),
                         due=v.get("due", ""))
     elif status != "closed":
+        pr = 3 if label == "personal" else 2
+        if rel and rel.get("priority") == "low": pr = 3
         item = dict(status=status, what=what, next="", anchor=anchor,
-                    src="heuristic", stale=False, priority=3 if label == "personal" else 2)
+                    src="heuristic", stale=False, priority=pr)
     if not item: continue
 
     item.update(jid=jid, name=ch["name"], label=label,
@@ -156,7 +168,11 @@ for r in con.execute("""SELECT m.chat_jid, COUNT(*) n,
     GROUP BY m.chat_jid ORDER BY MAX(m.ts) DESC""",
     (now - 5400,)):
     ch = chats.get(r["chat_jid"])
-    if not ch or ch["label"] in ("ignore", "clutter"): continue
+    if not ch: continue
+    rel = relevance.get(r["chat_jid"])
+    if rel and rel["relevant"] in ("no", "archive"): continue
+    is_relevant_yes = rel and rel["relevant"] == "yes"
+    if not is_relevant_yes and ch["label"] in ("ignore", "clutter"): continue
     nm = ch["name"]
     if nm.endswith("@s.whatsapp.net") or nm.endswith("@g.us"): continue
     since_last.append(dict(jid=r["chat_jid"], name=nm, label=ch["label"],
@@ -179,6 +195,11 @@ for r in con.execute("""SELECT chat_jid, MAX(ts) mts FROM messages
     jid = r["chat_jid"]
     ch = chats.get(jid)
     if not ch or jid in queued: continue
+    rel = relevance.get(jid)
+    if rel and rel["relevant"] in ("no", "archive"): continue
+    # activity_only chats never sit in the standing dropped-ball queue -- they only
+    # surface via since_last/main loop when there is actually new activity.
+    if rel and rel.get("priority") == "activity_only": continue
     if ch["label"] not in ("dm","working-group"): continue
     if jid not in tracked and ch["label"] != "working-group": continue
     if ch["name"].endswith("@s.whatsapp.net") or ch["name"].endswith("@g.us"): continue
